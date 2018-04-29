@@ -3,12 +3,15 @@
 
 #include "stdafx.h"
 #include <iostream>
+#include "ListTemplate.h"
 
-using namespace std;
+
 
 
 int main()
 {
+	List<int> mylist(10);
+
 
     return 0;
 }
