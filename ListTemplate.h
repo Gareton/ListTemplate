@@ -1,122 +1,466 @@
 #ifndef ListTemplate
 #define ListTemplate
 
+
 #include "stdafx.h"
 #include <iostream>
 #include <assert.h>
 
-template <class T>
-class List
+namespace lt
 {
-public:
-	List(size_t size = 0);
-	~List();
-	void insert(T data, const int &node);
-	/*
-	T destroy(const int &node);
-	T getdata(const int &node);
-	void print();
-	static int getcount();
-	*/
-private:
-	//bool isEmpty();
-	T data;
-	List<T> *nextptr;
-	static int count;
-};
 
-
-using namespace std;
-
-template <class T>
-using Listptr = List<T> *;
-
-template <class T>
-int List<T>::count = 0;
-
-template <class T>
-List<T>::List(size_t size)
-{
-	if (size != 0)
+	template <class T>
+	class ListNode
 	{
-		nextptr = new List<T>;
-		if (nextptr != NULL)
+	public:
+	    ListNode();
+		~ListNode();
+		ListNode<T> *&getNextptr();
+		ListNode<T> *&getPreviousptr();
+		T &getData();
+		bool isEnd();
+		bool isBegining();
+	private:
+		T _data;
+		ListNode<T> *_nextptr;
+		ListNode<T> *_previousptr;
+	};
+
+	template <class T>
+	ListNode<T>::ListNode()
+	{
+		_data = 0;
+		_nextptr = nullptr;
+		_previousptr = nullptr;
+	}
+
+	template <class T>
+	ListNode<T>::~ListNode() {}
+
+	template <class T>
+	bool ListNode<T>::isEnd()
+	{
+		return _nextptr == nullptr;
+	}
+
+	template <class T>
+	bool ListNode<T>::isBegining()
+	{
+		return _previousptr == nullptr;
+	}
+
+	template <class T>
+	ListNode<T> *&ListNode<T>::getNextptr()
+	{
+		return _nextptr;
+	}
+
+	template <class T>
+	ListNode<T> *&ListNode<T>::getPreviousptr()
+	{
+		return _previousptr;
+	}
+
+	template <class T>
+	T &ListNode<T>::getData()
+	{
+		return _data;
+	}
+
+	template <class T>
+	using ListNodeptr = ListNode<T> *;
+
+	using namespace std;
+
+	template <class T>
+	class ListIterator;
+	template <class T>
+	class List
+	{
+	public:
+		List();
+		List(const List<T> &toCopy);
+		~List();
+		ListIterator<T> insert(ListIterator<T> pos, const T &idata);
+		ListIterator<T> erase(ListIterator<T> pos); 
+		List<T> &operator=(const List<T> &toCopy);
+		ListIterator<T> begin();
+		ListIterator<T> end();
+		ListIterator<T> cbegin() const;
+		ListIterator<T> cend() const;
+		void clear();
+		T &front();
+		T &back();
+		bool empty();
+		int size() const;
+	private:
+		ListNodeptr<T> _node_ptr;
+		ListNodeptr<T> _last_ptr;
+		int _nodesCount;
+	};
+
+	template <class T>
+	List<T>::List()
+	{
+		_nodesCount = 0;
+		_node_ptr = nullptr;
+		_last_ptr = nullptr;
+	}
+
+	template <class T>
+	ListIterator<T> List<T>::begin()
+	{
+		ListIterator<T> temp(this->_node_ptr);
+		return temp;
+	}
+
+	template <class T>
+	ListIterator<T> List<T>::cbegin() const
+	{
+		ListIterator<T> temp(this->_node_ptr);
+		return temp;
+	}
+
+	template <class T>
+	ListIterator<T> List<T>::end()
+	{
+		ListIterator<T> temp(nullptr);
+		return temp;
+	}
+
+	template <class T>
+	ListIterator<T> List<T>::cend() const
+	{
+		ListIterator<T> temp(nullptr);
+		return temp;
+	}
+
+	template <class T>
+	List<T>::List(const List<T> &toCopy)
+	{
+		ListNodeptr<T> newptr = nullptr, previousptr = nullptr;
+		ListNodeptr<T> *Currentptr = &_node_ptr;
+
+		for (auto it = toCopy.cbegin(); it != toCopy.cend(); it++)
 		{
-			++count;
-			Listptr<T> currentPtr = nextptr;
-
-			for (size_t i = 1; i < size && currentPtr != nullptr; i++, count++)
-			{
-				currentPtr->nextptr = new List<T>;
-				assert(currentPtr->nextptr != nullptr);
-				currentPtr = currentPtr->nextptr;
-			}
+			newptr = new ListNode<T>;
+			assert(newptr != nullptr);
+			newptr->getData() = *it;
+			newptr->getPreviousptr() = previousptr;
+			previousptr = newptr;
+			*Currentptr = newptr;
+			Currentptr = &((*Currentptr)->getNextptr());
 		}
-	}
-}
 
-template <class T>
-List<T>::~List()
-{
-	if (nextptr != nullptr)
+		_last_ptr = newptr;
+		_nodesCount = toCopy.size();
+	}
+
+	template <class T>
+	List<T>::~List() 
 	{
-		--count;
-		delete nextptr;
+		ListNodeptr<T> currentNodeptr = _node_ptr;
+
+		if (_node_ptr == nullptr)
+		{
+			_nodesCount = 0;
+			_last_ptr = nullptr;
+			return;
+		}
+
+		while (!currentNodeptr->isEnd())
+		{
+			currentNodeptr = currentNodeptr->getNextptr();
+		}
+
+		while (!currentNodeptr->isBegining())
+		{
+			currentNodeptr = currentNodeptr->getPreviousptr();
+			delete currentNodeptr->getNextptr();
+		}
+
+		delete _node_ptr;
+		_node_ptr = nullptr;
+		_nodesCount = 0;
+		_last_ptr = nullptr;
 	}
-}
 
-template <class T>
-void List<T>::insert(T data, const int &node)
-{
-	Listptr<T> &currentptr = nextptr;
-
-	for (int i = 1; i < node - 1 && currentptr != NULL; i++)
+	template <class T>
+	ListIterator<T> List<T>::insert(ListIterator<T> pos, const T &idata)
 	{
-		&currentptr = currentptr->nextptr;
+		ListNodeptr<T> newptr;
+
+		if (_last_ptr == nullptr)
+		{
+			newptr = new ListNode<T>;
+			assert(newptr != nullptr);
+			newptr->getData() = idata;
+			_node_ptr = newptr;
+			_last_ptr = _node_ptr;
+		}
+		else if (pos == this->begin())
+		{
+			newptr = new ListNode<T>;
+			assert(newptr != nullptr);
+			*newptr = *_node_ptr;
+			newptr->getPreviousptr() = _node_ptr;
+
+			if (_node_ptr->getNextptr() != nullptr)
+				(_node_ptr->getNextptr())->getPreviousptr() = newptr;
+
+			_node_ptr->getNextptr() = newptr;
+			_node_ptr->getData() = idata;
+			_last_ptr = newptr;
+		}
+		else if(pos == this->end())
+		{
+			newptr = new ListNode<T>;
+			assert(newptr != nullptr);
+			newptr->getData() = idata;
+			newptr->getPreviousptr() = _last_ptr;
+			_last_ptr->getNextptr() = newptr;
+			_last_ptr = newptr;
+
+		}
+		else
+		{
+			ListNodeptr<T> toInsert = pos.getPtr();
+
+			newptr = new ListNode<T>;
+			assert(newptr != nullptr);
+			newptr->getData() = idata;
+			newptr->getNextptr() = toInsert;
+			newptr->getPreviousptr() = toInsert->getPreviousptr();
+			toInsert->getPreviousptr()->getNextptr() = newptr;
+			toInsert->getPreviousptr() = newptr;
+		}
+
+		ListIterator<T> temp(newptr);
+		++_nodesCount;
+
+		return temp;
 	}
 
-	if (node <= 1)
+	template <class T>
+	ListIterator<T> List<T>::erase(ListIterator<T> pos)
 	{
-		Listptr<T> newptr = new List;
-		assert(newptr != nullptr);
-		newptr->data = data;
-		newptr->nextPtr = currentptr;
-		currentptr = newptr;
+		if (pos == this->end())
+			return pos;
+
+		ListIterator<T> temp;
+
+		if (pos == begin())
+		{
+			if (_last_ptr == _node_ptr)
+				_last_ptr = nullptr;
+
+			pos++;
+			delete _node_ptr;
+			_node_ptr = pos.getPtr();
+		}
+		else if (pos.getPtr() == _last_ptr)
+		{
+			temp = pos;
+			--pos;
+			pos.getPtr()->getNextptr() = nullptr;
+			_last_ptr = pos.getPtr();
+			delete temp.getPtr();
+			return pos;
+		}
+		else
+		{
+			temp = pos;
+			--pos;
+			pos.getPtr()->getNextptr() = temp.getPtr()->getNextptr();
+			temp.getPtr()->getNextptr()->getPreviousptr() = pos.getPtr();
+			delete temp.getPtr();
+			return ++pos;
+		}
+
+		--_nodesCount;
+
+		return pos;
 	}
-	else
+
+	template <class T>
+	List<T> &List<T>::operator=(const List<T> &toCopy)
 	{
-		Listptr<T> &priveousptr = currentptr;
-		&currentptr = currentptr->nextptr;
-		Listptr<T> newptr = new List;
-		assert(newptr != nullptr);
-		newptr->data = data;
-		priveousptr->nextptr = newptr;
-		newptr->nextptr = currentptr;
+		if (&toCopy == this)
+			return *this;
+
+		this->~List();
+
+		ListNodeptr<T> newptr = nullptr, previousptr = nullptr;
+		ListNodeptr<T> *Currentptr = &_node_ptr;
+
+		for (auto it = toCopy.cbegin(); it != toCopy.cend(); it++)
+		{
+			newptr = new ListNode<T>;
+			assert(newptr != nullptr);
+			newptr->getData() = *it;
+			newptr->getPreviousptr() = previousptr;
+			previousptr = newptr;
+			*Currentptr = newptr;
+			Currentptr = &((*Currentptr)->getNextptr());
+		}
+
+		_last_ptr = newptr;
+		_nodesCount = toCopy.size();
+
+		return *this;
 	}
+
+	template <class T>
+	void List<T>::clear()
+	{
+		this->~List();
+	}
+
+	template <class T>
+	bool List<T>::empty()
+	{
+		return _node_ptr == nullptr;
+	}
+
+	template <class T>
+	T &List<T>::front()
+	{
+		assert(_node_ptr != nullptr);
+		return _node_ptr->getData();
+	}
+
+	template <class T>
+	T &List<T>::back()
+	{
+		assert(_last_ptr != nullptr);
+		return _last_ptr->getData();
+	}
+
+	template <class T>
+	ostream &operator<<(ostream &output, const List<T> &toPrint)
+	{
+		for (auto it = toPrint.cbegin(); it != toPrint.cend(); it++)
+		{
+			output << *it << " ";
+		}
+	
+		return output;
+	}
+	
+	template <class T>
+	int List<T>::size() const
+	{
+		return _nodesCount;
+	}
+	
+
+	template <class T>
+	class ListIterator
+	{
+	public:
+		explicit ListIterator(ListNodeptr<T> ptr = nullptr);
+		ListIterator<T> operator++();
+		ListIterator<T> operator++(int);
+		ListIterator<T> operator--();
+		ListIterator<T> operator--(int);
+		ListIterator<T> operator+(const int &count);
+		bool operator==(const ListIterator<T> &it2);
+		bool operator!=(const ListIterator<T> &it2);
+		T & operator*();
+		ListNodeptr<T> getPtr();
+	private:
+		ListNodeptr<T> _ptr;
+	};
+
+	template<class T>
+	ListNodeptr<T> ListIterator<T>::getPtr()
+	{
+		return _ptr;
+	}
+
+	template<class T>
+	ListIterator<T>::ListIterator(ListNodeptr<T> ptr)
+	{
+		_ptr = ptr;
+	}
+
+	template <class T>
+	ListIterator<T> ListIterator<T>::operator++()
+	{
+		if (_ptr == nullptr)
+			return *this;
+
+		_ptr = _ptr->getNextptr();
+		return *this;
+	}
+	
+	template <class T>
+	ListIterator<T> ListIterator<T>::operator++(int)
+	{
+		if (_ptr == nullptr)
+			return *this;
+
+		ListIterator<T> temp(_ptr);		
+		_ptr = _ptr->getNextptr();
+		return temp;
+	}
+
+	template <class T>
+	ListIterator<T> ListIterator<T>::operator--()
+	{
+		if (_ptr == nullptr)
+			return *this;
+
+		_ptr = _ptr->getPreviousptr();
+		return *this;
+	}
+
+	template <class T>
+	ListIterator<T> ListIterator<T>::operator--(int)
+	{
+		if (_ptr == nullptr)
+			return *this;
+
+		ListIterator<T> temp(_ptr);
+		_ptr = _ptr->getPreviousptr();
+		return temp;
+	}
+
+	template <class T>
+	ListIterator<T> ListIterator<T>::operator+(const int &count)
+	{
+		ListIterator<T> temp = *this;
+
+		for (int i = 0; i < count; i++)
+		{
+			++temp;
+		}
+
+		return temp;
+	}
+
+	template <class T>
+	bool ListIterator<T>::operator==(const ListIterator<T> &it2)
+	{
+		return _ptr == it2._ptr;
+		
+	}
+
+	template <class T>
+	bool ListIterator<T>::operator!=(const ListIterator<T> &it2)
+	{
+		return _ptr != it2._ptr;
+	}
+
+	template <class T>
+	T &ListIterator<T>::operator*()
+	{
+		assert(_ptr != nullptr);
+		return _ptr->getData();
+	}
+
 }
 
-/*
-template <class T>
-T List<T>::destroy(const int &node)
-{}
 
-template <class T>
-T List<T>::getdata(const int &node)
-{}
-
-template <class T>
-void List<T>::print()
-{}
-
-template <class T>
-int List<T>::getcount()
-{
-}
-
-template <class T>
-bool List<T>::isEmpty()
-{
-
-}
-*/
+	
 #endif
